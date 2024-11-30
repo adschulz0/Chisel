@@ -26,123 +26,78 @@ public class Test : MonoBehaviour
 
     private void Update()
     {
-        /*
-        Vector3 boxOffset = knife.transform.forward / knife.transform.localScale.z / 2f * 0.9f;
-        float castLength = knife.transform.localScale.z * 0.1f / 2f;
+        Transform knifeTransform = knife.transform;
 
-        Debug.DrawRay(knife.transform.localPosition + boxOffset, knife.transform.forward * castLength * 2, Color.red);
+        // Access the corner points
+        Transform topLeft = knifeTransform.Find("Top Left");
+        Transform topRight = knifeTransform.Find("Top Right");
+        Transform bottomLeft = knifeTransform.Find("Bottom Left");
+        Transform bottomRight = knifeTransform.Find("Bottom Right");
 
-        if (Physics.Raycast(knife.transform.localPosition + boxOffset, knife.transform.forward, out RaycastHit hitInfo, castLength * 2))
-        {
-            Debug.Log(hitInfo.triangleIndex);
-        }*/
+        Debug.DrawRay(topLeft.position, knifeTransform.forward, Color.green);
+        Debug.DrawRay(topRight.position, knifeTransform.forward, Color.green);
+        Debug.DrawRay(bottomLeft.position, knifeTransform.forward, Color.green);
+        Debug.DrawRay(bottomRight.position, knifeTransform.forward, Color.green);
 
     }
 
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if (other.name == "knife")
         {
-            Debug.Log("collided with knife");
+            Transform knifeTransform = other.transform;
 
-            Vector3 boxOffset = other.transform.forward / other.transform.localScale.z / 2f * 0.9f;
-            float castLength = other.transform.localScale.z * 0.1f / 2f;
+            // Access the corner points
+            Transform topLeft = knifeTransform.Find("Top Left");
+            Transform topRight = knifeTransform.Find("Top Right");
+            Transform bottomLeft = knifeTransform.Find("Bottom Left");
+            Transform bottomRight = knifeTransform.Find("Bottom Right");
 
-            Vector3 boxHalfExtents = other.transform.localScale / 2f;
-            boxHalfExtents.z = castLength / 2f;
-            if (Physics.Raycast(other.transform.localPosition + boxOffset, other.transform.forward, out RaycastHit hitInfo, castLength))
+            // Convert their world positions to the cube's local space
+            Vector3 topLeftLocal = transform.InverseTransformPoint(topLeft.position);
+            Vector3 topRightLocal = transform.InverseTransformPoint(topRight.position);
+            Vector3 bottomLeftLocal = transform.InverseTransformPoint(bottomLeft.position);
+            Vector3 bottomRightLocal = transform.InverseTransformPoint(bottomRight.position);
+
+
+            // Find min and max bounds in local space
+            float minX = Mathf.Min(topLeftLocal.x, bottomLeftLocal.x);
+            float maxX = Mathf.Max(topRightLocal.x, bottomRightLocal.x);
+            float minY = Mathf.Min(bottomLeftLocal.y, bottomRightLocal.y);
+            float maxY = Mathf.Max(topLeftLocal.y, topRightLocal.y);
+
+            List<int> verticesWithinBounds = new List<int>();
+
+            for (int i = 0; i < meshVertices.Count; i++)
             {
-                Debug.Log("Knife ray hit box");
+                Vector3 vertex = meshVertices[i];
 
-                Vector3 localHitPosition = meshFilter.transform.InverseTransformPoint(hitInfo.point);
-
-                Debug.Log("local hit position: " + localHitPosition);
-
-                
-                GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                cube.transform.position = localHitPosition;
-                cube.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);  // Set the size of the cube
-
-                float closestDistance = Mathf.Infinity;
-                Vector3 closestVertex = Vector3.zero;
-                int hitTriangle = 0;
-
-                for (int i = 0; i < meshVertices.Count; i++)
+                if ((vertex.x >= minX && vertex.x <= maxX) && (vertex.y >= minY && vertex.y <= maxY))
                 {
-                    float distance = Vector3.Distance(meshVertices[i], localHitPosition);
-
-                    if (distance < closestDistance)
-                    {
-                        closestDistance = distance;
-                        closestVertex = meshVertices[i];
-                        hitTriangle = i;
-                    }
+                    verticesWithinBounds.Add(i);
                 }
-
-                Debug.Log(closestVertex);
-
-                GameObject cube2 = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                cube2.transform.position = closestVertex;
-                cube2.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);  // Set the size of the cube
-                
-                //NEW GOAL TO SEE IF VERTICES ARE WITHIN THE BOUNDS OF THE KNIFE'S BOX COLLIDER (OR SOME BOUNDING BOX)
-
-                // Get the local position and size of the BoxCollider (this defines the "bounding box" around the hit point)
-                Vector3 boxCenter = other.GetComponent<BoxCollider>().center;
-
-                Debug.Log(boxCenter);
-
-                Vector3 boxSize = other.GetComponent<BoxCollider>().size;
-
-                Debug.Log(boxSize);
-
-
-                List<int> newTriangles = new List<int>();
-
-                for (int i = 0; i < meshTriangles.Count; i += 3)
-                {
-                    if (meshTriangles[i] == hitTriangle || meshTriangles[i + 1] == hitTriangle || meshTriangles[i + 2] == hitTriangle)
-                    {
-                        continue;
-                    }
-
-                    newTriangles.Add(meshTriangles[i]);
-                    newTriangles.Add(meshTriangles[i + 1]);
-                    newTriangles.Add(meshTriangles[i + 2]);
-                }
-
-                meshTriangles = newTriangles;
             }
-            /*
-            if (Physics.BoxCast(other.transform.localPosition + boxOffset, boxHalfExtents, other.transform.forward, out RaycastHit hitInfo, other.transform.localRotation, castLength))
+
+            List<int> newTriangles = new List<int>();
+
+            for (int i = 0; i < meshTriangles.Count; i += 3)
             {
-                Debug.Log("---");
-                Debug.Log("triangle index: " + hitInfo.triangleIndex);
+                int firstTri = meshTriangles[i];
+                int secondTri = meshTriangles[i + 1];
+                int thirdTri = meshTriangles[i + 2];
 
-                int hitTriangle = meshTriangles[hitInfo.triangleIndex];
-
-                Debug.Log("actual triangle: " + hitTriangle);
-
-                Debug.Log("Triangle coordinates: " + meshVertices[hitTriangle]);
-
-                List<int> newTriangles = new List<int>();
-
-                for (int i = 0; i < meshTriangles.Count; i += 3)
+                if (verticesWithinBounds.Contains(firstTri) || verticesWithinBounds.Contains(secondTri) || verticesWithinBounds.Contains(thirdTri))
                 {
-                    if (meshTriangles[i] == hitTriangle || meshTriangles[i + 1] == hitTriangle || meshTriangles[i + 2] == hitTriangle)
-                    {
-                        continue;
-                    }
-
-                    newTriangles.Add(meshTriangles[i]);
-                    newTriangles.Add(meshTriangles[i + 1]);
-                    newTriangles.Add(meshTriangles[i + 2]);
+                    continue;
                 }
 
-                meshTriangles = newTriangles;
+                newTriangles.Add(firstTri);
+                newTriangles.Add(secondTri);
+                newTriangles.Add(thirdTri);
+            }
 
-            }*/
+            meshTriangles = newTriangles;
 
             //mesh.vertices = meshVertices.ToArray();
             mesh.triangles = meshTriangles.ToArray();
