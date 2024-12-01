@@ -13,6 +13,13 @@ public class Test : MonoBehaviour
 
     private List<int> verticesWithinBounds;
 
+    //NEW - PUSH VERTEX IN
+    private List<Vector3> meshNormals;
+    private float triangleLength;
+
+    public float width;
+
+
     private void Start()
     {
         meshFilter = GetComponent<MeshFilter>();
@@ -20,6 +27,10 @@ public class Test : MonoBehaviour
 
         meshVertices = mesh.vertices.ToList();
         meshTriangles = mesh.triangles.ToList();
+
+        //NEW - PUSH VERTEX IN
+        meshNormals = mesh.normals.ToList();
+        triangleLength = Vector3.Distance(meshVertices[0], meshVertices[1]);
     }
 
     private void Update()
@@ -36,7 +47,7 @@ public class Test : MonoBehaviour
             Transform center = toolTransform.Find("Center");
 
             Vector3 toolSize = toolTransform.transform.localScale;
-            Vector3 boundSize = new Vector3(toolSize.x, toolSize.y, 0.05f); //0.05 width of the box just for third dimensionality, can change
+            Vector3 boundSize = new Vector3(toolSize.x, toolSize.y, width); //0.05 width of the box just for third dimensionality, can change
 
             Bounds bounds = new Bounds(center.position, boundSize);
 
@@ -46,7 +57,9 @@ public class Test : MonoBehaviour
             {
                 Vector3 vertex = meshVertices[i];
 
-                if (bounds.Contains(vertex))
+                Vector3 worldVertex = transform.TransformPoint(vertex);
+
+                if (bounds.Contains(worldVertex))
                 {
                     verticesWithinBounds.Add(i);
                 }
@@ -62,7 +75,40 @@ public class Test : MonoBehaviour
 
                 if (verticesWithinBounds.Contains(firstTri) || verticesWithinBounds.Contains(secondTri) || verticesWithinBounds.Contains(thirdTri))
                 {
-                    continue;
+                    //NEW - PUSH VERTEX IN
+                    if (verticesWithinBounds.Contains(firstTri))
+                    {
+                        Vector3 vertex = meshVertices[firstTri];
+                        //Vector3 normal = meshNormals[firstTri];
+                        Vector3 normal = other.transform.forward;
+
+                        Vector3 backwardPosition = vertex + normal * triangleLength;
+
+                        meshVertices[firstTri] = backwardPosition;
+                    }
+                    else if (verticesWithinBounds.Contains(secondTri))
+                    {
+                        Vector3 vertex = meshVertices[secondTri];
+                        //Vector3 normal = meshNormals[secondTri];
+                        Vector3 normal = other.transform.forward;
+
+                        Vector3 backwardPosition = vertex + normal * triangleLength;
+
+                        meshVertices[secondTri] = backwardPosition;
+                    }
+                    else
+                    {
+                        Vector3 vertex = meshVertices[thirdTri];
+                        //Vector3 normal = meshNormals[thirdTri];
+                        Vector3 normal = other.transform.forward;
+
+                        Vector3 backwardPosition = vertex + normal * triangleLength;
+
+                        meshVertices[thirdTri] = backwardPosition;
+                    }
+
+
+                    //continue;
                 }
 
                 newTriangles.Add(firstTri);
@@ -72,7 +118,7 @@ public class Test : MonoBehaviour
 
             meshTriangles = newTriangles;
 
-            //mesh.vertices = meshVertices.ToArray();
+            mesh.vertices = meshVertices.ToArray();
             mesh.triangles = meshTriangles.ToArray();
 
             GetComponent<MeshFilter>().mesh = mesh;
