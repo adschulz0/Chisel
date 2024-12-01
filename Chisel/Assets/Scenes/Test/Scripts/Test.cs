@@ -11,7 +11,7 @@ public class Test : MonoBehaviour
     private List<Vector3> meshVertices;
     private List<int> meshTriangles;
 
-    public GameObject knife;
+    private List<int> verticesWithinBounds;
 
     private void Start()
     {
@@ -20,60 +20,33 @@ public class Test : MonoBehaviour
 
         meshVertices = mesh.vertices.ToList();
         meshTriangles = mesh.triangles.ToList();
-
-
     }
 
     private void Update()
     {
-        Transform knifeTransform = knife.transform;
-
-        // Access the corner points
-        Transform topLeft = knifeTransform.Find("Top Left");
-        Transform topRight = knifeTransform.Find("Top Right");
-        Transform bottomLeft = knifeTransform.Find("Bottom Left");
-        Transform bottomRight = knifeTransform.Find("Bottom Right");
-
-        Debug.DrawRay(topLeft.position, knifeTransform.forward, Color.green);
-        Debug.DrawRay(topRight.position, knifeTransform.forward, Color.green);
-        Debug.DrawRay(bottomLeft.position, knifeTransform.forward, Color.green);
-        Debug.DrawRay(bottomRight.position, knifeTransform.forward, Color.green);
 
     }
 
 
     private void OnTriggerStay(Collider other)
     {
-        if (other.name == "knife")
+        if (other.name == "tool")
         {
-            Transform knifeTransform = other.transform;
+            Transform toolTransform = other.transform;
+            Transform center = toolTransform.Find("Center");
 
-            // Access the corner points
-            Transform topLeft = knifeTransform.Find("Top Left");
-            Transform topRight = knifeTransform.Find("Top Right");
-            Transform bottomLeft = knifeTransform.Find("Bottom Left");
-            Transform bottomRight = knifeTransform.Find("Bottom Right");
+            Vector3 toolSize = toolTransform.transform.localScale;
+            Vector3 boundSize = new Vector3(toolSize.x, toolSize.y, 0.05f); //0.05 width of the box just for third dimensionality, can change
 
-            // Convert their world positions to the cube's local space
-            Vector3 topLeftLocal = transform.InverseTransformPoint(topLeft.position);
-            Vector3 topRightLocal = transform.InverseTransformPoint(topRight.position);
-            Vector3 bottomLeftLocal = transform.InverseTransformPoint(bottomLeft.position);
-            Vector3 bottomRightLocal = transform.InverseTransformPoint(bottomRight.position);
+            Bounds bounds = new Bounds(center.position, boundSize);
 
-
-            // Find min and max bounds in local space
-            float minX = Mathf.Min(topLeftLocal.x, bottomLeftLocal.x);
-            float maxX = Mathf.Max(topRightLocal.x, bottomRightLocal.x);
-            float minY = Mathf.Min(bottomLeftLocal.y, bottomRightLocal.y);
-            float maxY = Mathf.Max(topLeftLocal.y, topRightLocal.y);
-
-            List<int> verticesWithinBounds = new List<int>();
+            verticesWithinBounds = new List<int>();
 
             for (int i = 0; i < meshVertices.Count; i++)
             {
                 Vector3 vertex = meshVertices[i];
 
-                if ((vertex.x >= minX && vertex.x <= maxX) && (vertex.y >= minY && vertex.y <= maxY))
+                if (bounds.Contains(vertex))
                 {
                     verticesWithinBounds.Add(i);
                 }
